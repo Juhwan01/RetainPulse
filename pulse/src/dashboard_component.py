@@ -73,9 +73,15 @@ def create_summary_dashboard(data_dict):
         year_ago = latest_date - timedelta(days=365)
         recent_visits = visits_df[visits_df['DATE_KST'] >= year_ago]
         
-        # 월별 집계
-        monthly_visits = recent_visits.groupby([recent_visits['DATE_KST'].dt.year, recent_visits['DATE_KST'].dt.month, 'DEP_NAME'])['COUNT'].sum().reset_index()
-        monthly_visits['year_month'] = monthly_visits['DATE_KST'].dt.year.astype(str) + '-' + monthly_visits['DATE_KST'].dt.month.astype(str).str.zfill(2)
+        # 월별 집계 - 컬럼명 충돌 방지를 위해 명시적 컬럼명 사용
+        monthly_visits = recent_visits.groupby([
+            recent_visits['DATE_KST'].dt.year.rename('year'),
+            recent_visits['DATE_KST'].dt.month.rename('month'),
+            'DEP_NAME'
+        ])['COUNT'].sum().reset_index()
+        
+        # year와 month를 문자열로 변환하여 year_month 컬럼 생성
+        monthly_visits['year_month'] = monthly_visits['year'].astype(str) + '-' + monthly_visits['month'].astype(str).str.zfill(2)
         
         # 트렌드 그래프
         fig = px.line(

@@ -9,7 +9,9 @@ def analyze_visit_patterns(visits_df):
     # 일별 방문 데이터를 고객 수준으로 변환 (실제 데이터에는 고객 ID가 있겠지만, 
     # 현재 데이터에서는 백화점별 집계 데이터이므로 여기서는 매장 수준 분석)
     
-    # 날짜 형식 변환
+    # 날짜 형식 변환 - 이미 datetime 형식인지 확인 후 변환
+    visits_df = visits_df.copy()  # 원본 데이터 변경 방지를 위해 복사본 사용
+    
     if not pd.api.types.is_datetime64_any_dtype(visits_df['DATE_KST']):
         visits_df['DATE_KST'] = pd.to_datetime(visits_df['DATE_KST'])
     

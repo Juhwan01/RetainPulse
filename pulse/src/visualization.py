@@ -400,11 +400,43 @@ def display_retention_strategies(churn_risk, segments, store=None, selected_segm
     # 세그먼트별 이탈 방지 전략
     st.subheader("세그먼트별 이탈 방지 전략")
     
-    # 세그먼트 탭
-    segment_tabs = st.tabs(segments['income_segments'])
+    # 세그먼트 목록 확인 (동적으로 처리)
+    available_segments = segments.get('income_segments', [])
+    if not available_segments:
+        st.warning("세그먼트 정보가 없습니다.")
+        return
     
-    # 세그먼트별 전략
+    # 세그먼트 탭
+    segment_tabs = st.tabs(available_segments)
+    
+    # 세그먼트별 전략 - 모든 가능한 세그먼트 이름 포함
     segment_strategies = {
+        # APP_CONFIG에 정의된 세그먼트 (실제 앱에서 사용)
+        "VIP 고객": [
+            "개인화된 VIP 서비스 강화",
+            "프리미엄 이벤트 초청",
+            "한정판 상품 우선 구매권",
+            "프라이빗 쇼핑 경험 제공"
+        ],
+        "정기 방문 고객": [
+            "충성도 프로그램 혜택 확대",
+            "맞춤형 상품 추천 서비스",
+            "멤버십 등급 상향 기회 제공",
+            "정기 방문 보상 프로그램"
+        ],
+        "간헐적 방문 고객": [
+            "방문 빈도 증대 인센티브",
+            "시즌 행사 특별 초대",
+            "온라인-오프라인 연계 서비스",
+            "리마인더 마케팅 강화"
+        ],
+        "이탈 위험 고객": [
+            "즉각적인 할인 혜택 제공",
+            "재방문 인센티브 강화",
+            "1:1 고객 상담 서비스",
+            "서비스 불만족 사항 해결"
+        ],
+        # feature_eng.py에서 참조되는 세그먼트 (이전 코드와의 호환성 유지)
         "고소득층": [
             "개인화된 VIP 서비스 강화",
             "프리미엄 이벤트 초청",
@@ -431,20 +463,105 @@ def display_retention_strategies(churn_risk, segments, store=None, selected_segm
         ]
     }
     
-    for i, segment in enumerate(segments['income_segments']):
+    # 세그먼트별 프로모션 효과 매핑 (동적으로 대응)
+    promotion_effects_mapping = {
+        # APP_CONFIG에 정의된 세그먼트
+        "VIP 고객": {
+            "VIP 혜택": 0.7,  # 30% 감소
+            "포인트 적립": 0.9,  # 10% 감소
+            "할인": 0.85,  # 15% 감소
+            "이벤트 초대": 0.75,  # 25% 감소
+            "무료 배송": 0.95  # 5% 감소
+        },
+        "정기 방문 고객": {
+            "VIP 혜택": 0.8,
+            "포인트 적립": 0.75,
+            "할인": 0.7,
+            "이벤트 초대": 0.85,
+            "무료 배송": 0.9
+        },
+        "간헐적 방문 고객": {
+            "VIP 혜택": 0.9,
+            "포인트 적립": 0.8,
+            "할인": 0.65,
+            "이벤트 초대": 0.85,
+            "무료 배송": 0.75
+        },
+        "이탈 위험 고객": {
+            "VIP 혜택": 0.95,
+            "포인트 적립": 0.85,
+            "할인": 0.6,
+            "이벤트 초대": 0.9,
+            "무료 배송": 0.75
+        },
+        # feature_eng.py에서 참조되는 세그먼트
+        "고소득층": {
+            "VIP 혜택": 0.7,
+            "포인트 적립": 0.9,
+            "할인": 0.85,
+            "이벤트 초대": 0.75,
+            "무료 배송": 0.95
+        },
+        "중상위층": {
+            "VIP 혜택": 0.8,
+            "포인트 적립": 0.75,
+            "할인": 0.7,
+            "이벤트 초대": 0.85,
+            "무료 배송": 0.9
+        },
+        "중산층": {
+            "VIP 혜택": 0.9,
+            "포인트 적립": 0.8,
+            "할인": 0.65,
+            "이벤트 초대": 0.85,
+            "무료 배송": 0.75
+        },
+        "일반소비자": {
+            "VIP 혜택": 0.95,
+            "포인트 적립": 0.85,
+            "할인": 0.6,
+            "이벤트 초대": 0.9,
+            "무료 배송": 0.75
+        }
+    }
+    
+    # 기본 프로모션 효과 (세그먼트가 정의되지 않은 경우 사용)
+    default_promotion_effects = {
+        "VIP 혜택": 0.85,
+        "포인트 적립": 0.8,
+        "할인": 0.7,
+        "이벤트 초대": 0.85,
+        "무료 배송": 0.85
+    }
+    
+    # 각 세그먼트 탭의 내용 표시
+    for i, segment in enumerate(available_segments):
         with segment_tabs[i]:
             if selected_segment and "전체" not in selected_segment and segment not in selected_segment:
                 st.info(f"{segment} 세그먼트가 선택되지 않았습니다.")
                 continue
-                
+            
+            # 세그먼트 프로필 안전하게 접근
+            segment_profile = segments.get('segment_profiles', {}).get(segment, {})
+            
             st.write(f"### {segment} 맞춤 전략")
-            st.write(f"평균 소득: {segments['segment_profiles'][segment]['avg_income']}")
-            st.write(f"주요 거주지역: {', '.join(segments['segment_profiles'][segment]['main_residence'])}")
-            st.write(f"방문 빈도: {segments['segment_profiles'][segment]['visit_frequency']}")
-            st.write(f"평균 구매액: {segments['segment_profiles'][segment]['avg_purchase']}")
+            
+            # 프로필 정보 안전하게 표시
+            avg_income = segment_profile.get('avg_income', '정보 없음')
+            st.write(f"평균 소득: {avg_income}")
+            
+            main_residence = segment_profile.get('main_residence', ['정보 없음'])
+            if isinstance(main_residence, list):
+                st.write(f"주요 거주지역: {', '.join(main_residence)}")
+            else:
+                st.write(f"주요 거주지역: {main_residence}")
+            
+            st.write(f"방문 빈도: {segment_profile.get('visit_frequency', '정보 없음')}")
+            st.write(f"평균 구매액: {segment_profile.get('avg_purchase', '정보 없음')}")
             
             st.write("#### 이탈 방지 전략")
-            for strategy in segment_strategies[segment]:
+            strategies = segment_strategies.get(segment, ["맞춤 전략 정보가 없습니다."])
+            for strategy in strategies:
                 st.write(f"- {strategy}")
             
             # 세그먼트별 이탈 위험 및 프로모션 효과 시뮬레이션
@@ -467,42 +584,12 @@ def display_retention_strategies(churn_risk, segments, store=None, selected_segm
             )
             
             # 이탈 위험 고객 비율 (기본)
-            base_risk = segments['segment_profiles'][segment]['churn_risk'] * 100
+            base_risk = segment_profile.get('churn_risk', 0.3) * 100  # 기본값 0.3 (30%)
             
-            # 프로모션 효과 가중치 (세그먼트별로 다른 효과)
-            promotion_effects = {
-                "고소득층": {
-                    "VIP 혜택": 0.7,  # 30% 감소
-                    "포인트 적립": 0.9,  # 10% 감소
-                    "할인": 0.85,  # 15% 감소
-                    "이벤트 초대": 0.75,  # 25% 감소
-                    "무료 배송": 0.95  # 5% 감소
-                },
-                "중상위층": {
-                    "VIP 혜택": 0.8,
-                    "포인트 적립": 0.75,
-                    "할인": 0.7,
-                    "이벤트 초대": 0.85,
-                    "무료 배송": 0.9
-                },
-                "중산층": {
-                    "VIP 혜택": 0.9,
-                    "포인트 적립": 0.8,
-                    "할인": 0.65,
-                    "이벤트 초대": 0.85,
-                    "무료 배송": 0.75
-                },
-                "일반소비자": {
-                    "VIP 혜택": 0.95,
-                    "포인트 적립": 0.85,
-                    "할인": 0.6,
-                    "이벤트 초대": 0.9,
-                    "무료 배송": 0.75
-                }
-            }
-            
-            # 효과 계산
-            effect_ratio = promotion_effects[segment][promotion_type]
+            # 효과 계산 - 동적으로 세그먼트 효과 매핑
+            # 세그먼트별 효과를 찾거나 기본값 사용
+            segment_effects = promotion_effects_mapping.get(segment, default_promotion_effects)
+            effect_ratio = segment_effects.get(promotion_type, 0.8)  # 기본값 0.8 (20% 감소)
             
             # 프로모션 강도에 따른 조정
             adjusted_effect = effect_ratio + (1 - effect_ratio) * (promotion_intensity - 15) / 30
@@ -527,18 +614,36 @@ def display_retention_strategies(churn_risk, segments, store=None, selected_segm
                     f"-{base_risk - reduced_risk:.1f}%"
                 )
             
-            # ROI 계산 (간단한 예시)
+            # ROI 계산 (안전하게 처리)
             customer_count = 1000  # 가정: 세그먼트당 1000명
-            promotion_cost = promotion_intensity * customer_count * (
-                2.0 if segment == "고소득층" else
-                1.5 if segment == "중상위층" else
-                1.0 if segment == "중산층" else 0.5
-            )  # 비용: 세그먼트와 강도에 따라 다름
+            
+            # 세그먼트별 비용 계수 매핑
+            cost_factor = 1.0  # 기본값
+            if segment in ["VIP 고객", "고소득층"]:
+                cost_factor = 2.0
+            elif segment in ["정기 방문 고객", "중상위층"]:
+                cost_factor = 1.5
+            elif segment in ["간헐적 방문 고객", "중산층"]:
+                cost_factor = 1.0
+            elif segment in ["이탈 위험 고객", "일반소비자"]:
+                cost_factor = 0.5
+            
+            promotion_cost = promotion_intensity * customer_count * cost_factor
             
             saved_customers = customer_count * (base_risk / 100) * (1 - adjusted_effect)
-            customer_value = float(segments['segment_profiles'][segment]['avg_purchase'].replace('만원', '').replace('~', '-').split('-')[0]) * 12  # 연간 가치
+            
+            # 고객 가치 계산 (안전하게)
+            avg_purchase_str = str(segment_profile.get('avg_purchase', '10만원'))
+            try:
+                # 문자열에서 숫자 추출 시도
+                avg_purchase_value = float(avg_purchase_str.replace('만원', '').replace('~', '-').split('-')[0])
+            except (ValueError, IndexError):
+                avg_purchase_value = 10  # 기본값 10만원
+            
+            customer_value = avg_purchase_value * 12  # 연간 가치
             benefit = saved_customers * customer_value
             
+            # ROI 계산 (0으로 나누기 방지)
             roi = (benefit - promotion_cost) / promotion_cost if promotion_cost > 0 else 0
             
             # ROI 표시
@@ -572,19 +677,20 @@ def display_retention_strategies(churn_risk, segments, store=None, selected_segm
     
     campaign_timing = st.selectbox(
         "캠페인 시점",
-        campaign_options[campaign_type]
+        campaign_options.get(campaign_type, ["선택하세요"])
     )
     
+    # 타겟 세그먼트 - 기본값 없이 설정
     target_segments = st.multiselect(
         "타겟 세그먼트",
-        segments['income_segments'],
-        default=segments['income_segments'][0] if selected_segment is None or "전체" in selected_segment else selected_segment
+        available_segments,
+        default=[]  # 기본값 없음
     )
     
     promotion_methods = st.multiselect(
         "프로모션 방법",
         ["이메일", "SMS", "앱 푸시", "우편물", "백화점 내 안내"],
-        default=["이메일", "SMS"]
+        default=["이메일", "SMS"]  # 기본 선택값 (일반적인 선택지라 남겨둠)
     )
     
     # 캠페인 계획 생성 버튼
@@ -595,21 +701,31 @@ def display_retention_strategies(churn_risk, segments, store=None, selected_segm
         campaign_name = f"{campaign_timing} {campaign_type.replace('캠페인', '').strip()} 고객 유지 캠페인"
         
         st.write(f"**캠페인명:** {campaign_name}")
-        st.write(f"**대상 세그먼트:** {', '.join(target_segments)}")
+        st.write(f"**대상 세그먼트:** {', '.join(target_segments) if target_segments else '선택된 세그먼트 없음'}")
         st.write(f"**전달 방법:** {', '.join(promotion_methods)}")
         
         # 세그먼트별 맞춤 내용
-        st.write("**세그먼트별 맞춤 내용:**")
-        for segment in target_segments:
-            segment_offer = (
-                "프리미엄 VIP 초대장 및 사은품" if segment == "고소득층" else
-                "추가 포인트 적립 및 특별 쿠폰" if segment == "중상위층" else
-                "시즌 할인 및 사은품" if segment == "중산층" else
-                "특별 할인 및 이벤트 참여 기회"
-            )
-            st.write(f"- {segment}: {segment_offer}")
+        if target_segments:
+            st.write("**세그먼트별 맞춤 내용:**")
+            for segment in target_segments:
+                # 세그먼트별 오퍼 매핑 (앱에서 사용하는 세그먼트와 feature_eng.py 세그먼트 모두 지원)
+                segment_offer = ""
+                if segment in ["VIP 고객", "고소득층"]:
+                    segment_offer = "프리미엄 VIP 초대장 및 사은품"
+                elif segment in ["정기 방문 고객", "중상위층"]:
+                    segment_offer = "추가 포인트 적립 및 특별 쿠폰"
+                elif segment in ["간헐적 방문 고객", "중산층"]:
+                    segment_offer = "시즌 할인 및 사은품"
+                elif segment in ["이탈 위험 고객", "일반소비자"]:
+                    segment_offer = "특별 할인 및 이벤트 참여 기회"
+                else:
+                    segment_offer = "맞춤형 혜택 및 서비스"
+                
+                st.write(f"- {segment}: {segment_offer}")
+        else:
+            st.write("**세그먼트별 맞춤 내용:** 세그먼트를 선택하세요.")
         
-        # 일정
+        # 일정 표시
         st.write("**실행 일정:**")
         st.write("- 기획 완료: D-14일")
         st.write("- 콘텐츠 제작: D-10일")
@@ -618,20 +734,30 @@ def display_retention_strategies(churn_risk, segments, store=None, selected_segm
         st.write("- 발송: D-day")
         st.write("- 효과 측정: D+7일, D+14일, D+30일")
         
-        # 예상 효과
-        avg_risk_reduction = 0
-        for segment in target_segments:
-            base_effect = (
-                0.3 if segment == "고소득층" else
-                0.25 if segment == "중상위층" else
-                0.2 if segment == "중산층" else
-                0.15
-            )
-            avg_risk_reduction += base_effect
-        
-        avg_risk_reduction /= len(target_segments) if target_segments else 1
-        
-        st.write("**예상 효과:**")
-        st.write(f"- 이탈 위험 감소: {avg_risk_reduction*100:.1f}%")
-        st.write(f"- 방문 빈도 증가: {avg_risk_reduction*50:.1f}%")
-        st.write(f"- 객단가 증가: {avg_risk_reduction*30:.1f}%")
+        # 예상 효과 계산
+        if target_segments:
+            avg_risk_reduction = 0
+            for segment in target_segments:
+                # 세그먼트별 기본 효과 매핑
+                if segment in ["VIP 고객", "고소득층"]:
+                    base_effect = 0.3
+                elif segment in ["정기 방문 고객", "중상위층"]:
+                    base_effect = 0.25
+                elif segment in ["간헐적 방문 고객", "중산층"]:
+                    base_effect = 0.2
+                elif segment in ["이탈 위험 고객", "일반소비자"]:
+                    base_effect = 0.15
+                else:
+                    base_effect = 0.2  # 기본값
+                
+                avg_risk_reduction += base_effect
+            
+            # 평균 계산 (0으로 나누기 방지)
+            avg_risk_reduction = avg_risk_reduction / len(target_segments) if target_segments else 0.2
+            
+            st.write("**예상 효과:**")
+            st.write(f"- 이탈 위험 감소: {avg_risk_reduction*100:.1f}%")
+            st.write(f"- 방문 빈도 증가: {avg_risk_reduction*50:.1f}%")
+            st.write(f"- 객단가 증가: {avg_risk_reduction*30:.1f}%")
+        else:
+            st.write("**예상 효과:** 세그먼트를 선택하세요.")

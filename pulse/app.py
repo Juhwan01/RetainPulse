@@ -51,8 +51,8 @@ selected_store = st.sidebar.selectbox(
 )
 
 selected_segment = st.sidebar.multiselect(
-    "고객 세그먼트", APP_CONFIG["segments"] + ["전체"],
-    default=["이탈 위험 고객"]
+    "고객 세그먼트", 
+    ["전체"] + APP_CONFIG["segments"]
 )
 
 risk_threshold = st.sidebar.slider(
