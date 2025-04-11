@@ -10,12 +10,16 @@ def analyze_visit_patterns(visits_df):
     # 현재 데이터에서는 백화점별 집계 데이터이므로 여기서는 매장 수준 분석)
     
     # 날짜 형식 변환
-    visits_df['DATE_KST'] = pd.to_datetime(visits_df['DATE_KST'])
+    if not pd.api.types.is_datetime64_any_dtype(visits_df['DATE_KST']):
+        visits_df['DATE_KST'] = pd.to_datetime(visits_df['DATE_KST'])
     
     # 요일 및 월 추가
-    visits_df['dayofweek'] = visits_df['DATE_KST'].dt.dayofweek
-    visits_df['month'] = visits_df['DATE_KST'].dt.month
-    visits_df['year'] = visits_df['DATE_KST'].dt.year
+    if 'dayofweek' not in visits_df.columns:
+        visits_df['dayofweek'] = visits_df['DATE_KST'].dt.dayofweek
+    if 'month' not in visits_df.columns:
+        visits_df['month'] = visits_df['DATE_KST'].dt.month
+    if 'year' not in visits_df.columns:
+        visits_df['year'] = visits_df['DATE_KST'].dt.year
     
     # 백화점별 방문 트렌드
     store_trends = visits_df.groupby(['DEP_NAME', 'year', 'month']).agg(
@@ -82,9 +86,10 @@ def analyze_residence_workplace(residence_df):
 # 날씨와 방문 연관성 분석
 def analyze_weather_impact(visits_df, weather_df):
     # 날짜 형식 변환
-    visits_df['DATE_KST'] = pd.to_datetime(visits_df['DATE_KST'])
-    weather_df['DATE_KST'] = pd.to_datetime(weather_df['DATE_KST'])
-    
+    if not pd.api.types.is_datetime64_any_dtype(visits_df['DATE_KST']):
+        visits_df['DATE_KST'] = pd.to_datetime(visits_df['DATE_KST'])
+    if not pd.api.types.is_datetime64_any_dtype(weather_df['DATE_KST']):
+        weather_df['DATE_KST'] = pd.to_datetime(weather_df['DATE_KST'])
     # 날씨 데이터와 방문 데이터 병합
     visit_weather = pd.merge(
         visits_df,
@@ -133,12 +138,6 @@ def analyze_income_assets(income_asset_df, residence_df):
     # 주거지 데이터에서 각 법정동별 방문객 비율 추출
     home_data = residence_df[residence_df['LOC_TYPE'] == 1]
     
-    # 구/동 코드 연결 (실제 데이터에서는 코드 매핑 필요할 수 있음)
-    # 여기서는 가정: ADDR_LV2는 구, ADDR_LV3는 동
-    
-    # 소득 구간별 방문 패턴 분석
-    income_distribution = pd.DataFrame()
-    
     # 소득 구간별 환산을 위한 가중치 (중간값 사용)
     income_weights = {
         'RATE_INCOME_UNDER_20M': 15,
@@ -150,9 +149,13 @@ def analyze_income_assets(income_asset_df, residence_df):
         'RATE_INCOME_OVER_70M': 80
     }
     
-    # 평균 소득 계산 (가중 평균)
-    if 'DONG_NAME' in income_asset_df.columns:
-        # 각 구/동별 평균 소득 추정
+    # 각 동별 소득 분포 및 추정 평균 소득 계산
+    income_distribution = pd.DataFrame()
+    
+    if not income_asset_df.empty:
+        # 법정동 - 행정동 매핑 확인 (실제로는 매핑 테이블이 필요할 수 있음)
+        
+        # 평균 소득 계산 (가중 평균)
         for col, weight in income_weights.items():
             if col in income_asset_df.columns:
                 if 'est_income' not in income_asset_df.columns:
@@ -160,11 +163,21 @@ def analyze_income_assets(income_asset_df, residence_df):
                 income_asset_df['est_income'] += income_asset_df[col] * weight
         
         # 최근 데이터만 선택 (마지막 년월)
-        latest_month = income_asset_df['STANDARD_YEAR_MONTH'].max()
-        latest_income = income_asset_df[income_asset_df['STANDARD_YEAR_MONTH'] == latest_month]
-        
-        # 시각화를 위한 가공
-        income_distribution = latest_income[['DONG_NAME', 'est_income'] + list(income_weights.keys())]
+        if 'STANDARD_YEAR_MONTH' in income_asset_df.columns:
+            latest_month = income_asset_df['STANDARD_YEAR_MONTH'].max()
+            latest_income = income_asset_df[income_asset_df['STANDARD_YEAR_MONTH'] == latest_month]
+            
+            # 동별 소득 정보
+            if 'DISTRICT_KOR_NAME' in latest_income.columns:
+                income_distribution = latest_income[['DISTRICT_KOR_NAME', 'est_income'] + list(income_weights.keys())]
+                income_distribution = income_distribution.rename(columns={'DISTRICT_KOR_NAME': 'DONG_NAME'})
+            else:
+                # 대체 컬럼 사용
+                dong_col = next((col for col in ['DONG_NAME', 'DISTRICT_NAME', 'EMD'] 
+                                if col in latest_income.columns), None)
+                if dong_col:
+                    income_distribution = latest_income[[dong_col, 'est_income'] + list(income_weights.keys())]
+                    income_distribution = income_distribution.rename(columns={dong_col: 'DONG_NAME'})
     
     return {
         'income_distribution': income_distribution,
@@ -173,13 +186,13 @@ def analyze_income_assets(income_asset_df, residence_df):
 
 # 아파트 시세 데이터 분석
 def analyze_property_prices(apt_price_df, residence_df):
-    # 날짜 형식 변환
+    # 데이터 딕셔너리에 맞게 YYYYMMDD 컬럼 처리
     if 'YYYYMMDD' in apt_price_df.columns:
+        # 날짜 형식 변환
         apt_price_df['date'] = pd.to_datetime(apt_price_df['YYYYMMDD'], format='%Y%m%d')
         apt_price_df['year_month'] = apt_price_df['date'].dt.strftime('%Y-%m')
-    
-    # 최근 시세 데이터 선택
-    if 'date' in apt_price_df.columns:
+        
+        # 최근 시세 데이터 선택
         latest_date = apt_price_df['date'].max()
         latest_prices = apt_price_df[apt_price_df['date'] == latest_date]
     else:
@@ -295,7 +308,7 @@ def create_customer_segments(visit_patterns, residence_workplace, weather_impact
         'segment_profiles': segment_profiles
     }
 
-# 이탈 위험 고객 분석 및 예측 (계속)
+# 이탈 위험 고객 분석 및 예측
 def predict_churn_risk(segments, visit_patterns, weather_impact):
     # 이탈 위험 기준 정의 (예시)
     risk_thresholds = {
@@ -337,7 +350,7 @@ def predict_churn_risk(segments, visit_patterns, weather_impact):
             seasonal_weight = 1.2 if segment in ['일반소비자', '중산층'] else 1.0
             
             # 날씨 민감도 가중치
-            weather_weight = 1.3 if abs(weather['temp_correlation'].values[0]) > 0.5 else 1.0
+            weather_weight = 1.3 if len(weather) > 0 and abs(weather['temp_correlation'].values[0]) > 0.5 else 1.0
             
             # 최종 이탈 위험도
             segment_risk[segment] = min(0.95, base_risk * seasonal_weight * weather_weight)

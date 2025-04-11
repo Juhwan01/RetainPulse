@@ -10,7 +10,8 @@ from src.data_loader import (
     get_snowflake_connection, load_department_store_visits, load_residence_workplace_data,
     load_weather_data, load_floating_population_data, load_income_asset_data,
     load_card_spending_data, load_apartment_price_data, load_population_data,
-    load_female_child_data, load_administrative_boundary, generate_sample_data
+    load_female_child_data, load_administrative_boundary, load_region_master_data,
+    generate_sample_data
 )
 from src.feature_eng import (
     analyze_visit_patterns, analyze_residence_workplace, analyze_weather_impact,
@@ -22,6 +23,8 @@ from src.visualization import (
     display_visit_pattern_analysis, display_residence_income_analysis,
     display_retention_strategies
 )
+# 새로 추가한 대시보드 요약 컴포넌트 임포트
+from src.dashboard_component import create_summary_dashboard
 from config import SNOWFLAKE_CONFIG, APP_CONFIG
 
 # 앱 제목 설정
@@ -67,8 +70,12 @@ def load_all_data(use_sample=True):
             'visits_df': sample_data['visits_df'],
             'residence_df': sample_data['residence_df'],
             'weather_df': sample_data['weather_df'],
+            'floating_population_df': sample_data.get('floating_population_df', pd.DataFrame()),
             'income_asset_df': sample_data.get('income_asset_df', pd.DataFrame()),
+            'card_spending_df': sample_data.get('card_spending_df', pd.DataFrame()),
             'apt_price_df': sample_data.get('apt_price_df', pd.DataFrame()),
+            'population_df': sample_data.get('population_df', pd.DataFrame()),
+            'female_child_df': sample_data.get('female_child_df', pd.DataFrame()),
             'risk_customers': sample_data['risk_customers']
         }
     else:
@@ -112,6 +119,9 @@ def load_all_data(use_sample=True):
             # 10. 행정동경계 데이터 (SPH)
             admin_boundary_df = load_administrative_boundary(conn)
             
+            # 11. 지역 마스터 데이터 (SPH - 추가)
+            region_master_df = load_region_master_data(conn)
+            
             return {
                 'sample_data': False,
                 'visits_df': visits_df,
@@ -123,7 +133,8 @@ def load_all_data(use_sample=True):
                 'apartment_price_df': apartment_price_df,
                 'population_df': population_df,
                 'female_child_df': female_child_df,
-                'admin_boundary_df': admin_boundary_df
+                'admin_boundary_df': admin_boundary_df,
+                'region_master_df': region_master_df
             }
         except Exception as e:
             st.error(f"데이터 로드 중 오류가 발생했습니다: {str(e)}")
@@ -135,16 +146,20 @@ def load_all_data(use_sample=True):
                 'visits_df': sample_data['visits_df'],
                 'residence_df': sample_data['residence_df'],
                 'weather_df': sample_data['weather_df'],
+                'floating_population_df': sample_data.get('floating_population_df', pd.DataFrame()),
                 'income_asset_df': sample_data.get('income_asset_df', pd.DataFrame()),
+                'card_spending_df': sample_data.get('card_spending_df', pd.DataFrame()),
                 'apt_price_df': sample_data.get('apt_price_df', pd.DataFrame()),
+                'population_df': sample_data.get('population_df', pd.DataFrame()),
+                'female_child_df': sample_data.get('female_child_df', pd.DataFrame()),
                 'risk_customers': sample_data['risk_customers']
             }
 
 # 메인 프로세스
 def main():
     # 탭 설정
-    tab1, tab2, tab3, tab4, tab5 = st.tabs([
-        "이탈 위험 모니터링", "고객 세그먼트 분석", 
+    tab0, tab1, tab2, tab3, tab4, tab5 = st.tabs([
+        "대시보드 요약", "이탈 위험 모니터링", "고객 세그먼트 분석", 
         "방문 패턴 분석", "주거지 및 소득 분석", "맞춤형 대응 전략"
     ])
     
@@ -208,10 +223,26 @@ def main():
                 st.session_state.data_loaded = True
             
             st.success("데이터 로드 및 분석이 완료되었습니다!")
-            st.experimental_rerun()
+            st.rerun()
     
     # 데이터 로드 및 분석이 완료된 경우 각 탭에 내용 표시
     if st.session_state.data_loaded and st.session_state.analysis_done:
+        # 대시보드 요약 탭
+        with tab0:
+            # 모든 데이터를 딕셔너리로 전달
+            data_dict = {
+                'visits_df': st.session_state.visits_df,
+                'residence_df': st.session_state.residence_df,
+                'weather_df': st.session_state.weather_df,
+                'floating_population_df': st.session_state.get('floating_population_df', pd.DataFrame()),
+                'income_asset_df': st.session_state.get('income_asset_df', pd.DataFrame()),
+                'card_spending_df': st.session_state.get('card_spending_df', pd.DataFrame()),
+                'apt_price_df': st.session_state.get('apt_price_df', pd.DataFrame()),
+                'segments': st.session_state.segments if 'segments' in st.session_state else None,
+                'churn_risk': st.session_state.churn_risk if 'churn_risk' in st.session_state else None
+            }
+            create_summary_dashboard(data_dict)
+            
         # 이탈 위험 모니터링 탭
         with tab1:
             display_risk_monitoring(
