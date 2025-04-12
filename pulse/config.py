@@ -1,9 +1,12 @@
 # Snowflake 접속 정보 
+# 개인 키 파일 경로 설정 (실제 경로로 수정하세요)
+PRIVATE_KEY_PATH = "C:/Users/정주환/rsa_key.p8"  # 개인 키 파일 경로
+
 # 1. LOPLAT 데이터 (백화점 방문, 주거지/근무지, 날씨)
 LOPLAT_CONFIG = {
     "account": "KGAWUSR-SN57219",
     "user": "wnghks5432",
-    "password": "Wjdwnghks1278@",  # 실제 프로젝트에서는 환경변수 등으로 관리
+    "private_key_file": PRIVATE_KEY_PATH,  # 비밀번호 대신 개인 키 파일 사용
     "warehouse": "COMPUTE_WH",
     "database": "DEPARTMENT_STORE_FOOT_TRAFFIC_FOR_SNOWFLAKE_STREAMLIT_HACKATHON",
     "schema": "PUBLIC"
@@ -13,7 +16,7 @@ LOPLAT_CONFIG = {
 RESIDENCE_CONFIG = {
     "account": "KGAWUSR-SN57219",
     "user": "wnghks5432",
-    "password": "Wjdwnghks1278@",  # 실제 프로젝트에서는 환경변수 등으로 관리
+    "private_key_file": PRIVATE_KEY_PATH,  # 비밀번호 대신 개인 키 파일 사용
     "warehouse": "COMPUTE_WH",
     "database": "RESIDENTIAL__WORKPLACE_TRAFFIC_PATTERNS_FOR_SNOWFLAKE_STREAMLIT_HACKATHON",
     "schema": "PUBLIC"
@@ -23,7 +26,7 @@ RESIDENCE_CONFIG = {
 WEATHER_CONFIG = {
     "account": "KGAWUSR-SN57219",
     "user": "wnghks5432",
-    "password": "Wjdwnghks1278@",  # 실제 프로젝트에서는 환경변수 등으로 관리
+    "private_key_file": PRIVATE_KEY_PATH,  # 비밀번호 대신 개인 키 파일 사용
     "warehouse": "COMPUTE_WH",
     "database": "SEOUL_TEMPERATURE__RAINFALL_FOR_SNOWFLAKE_STREAMLIT_HACKATHON",
     "schema": "PUBLIC"
@@ -33,7 +36,7 @@ WEATHER_CONFIG = {
 SPH_CONFIG = {
     "account": "KGAWUSR-SN57219",
     "user": "wnghks5432",
-    "password": "Wjdwnghks1278@",  # 실제 프로젝트에서는 환경변수 등으로 관리
+    "private_key_file": PRIVATE_KEY_PATH,  # 비밀번호 대신 개인 키 파일 사용
     "warehouse": "COMPUTE_WH",
     "database": "SEOUL_DISTRICTLEVEL_DATA_FLOATING_POPULATION_CONSUMPTION_AND_ASSETS",
     "schema": "GRANDATA"
@@ -43,7 +46,7 @@ SPH_CONFIG = {
 DATAKNOWS_CONFIG = {
     "account": "KGAWUSR-SN57219",
     "user": "wnghks5432",
-    "password": "Wjdwnghks1278@",  # 실제 프로젝트에서는 환경변수 등으로 관리
+    "private_key_file": PRIVATE_KEY_PATH,  # 비밀번호 대신 개인 키 파일 사용
     "warehouse": "COMPUTE_WH",
     "database": "KOREAN_POPULATION__APARTMENT_MARKET_PRICE_DATA",
     "schema": "HACKATHON_2025Q2"
@@ -54,7 +57,7 @@ DATAKNOWS_CONFIG = {
 SNOWFLAKE_CONFIG = {
     "account": "KGAWUSR-SN57219",
     "user": "wnghks5432",
-    "password": "Wjdwnghks1278@",  # 실제 프로젝트에서는 환경변수 등으로 관리
+    "private_key_file": PRIVATE_KEY_PATH,  # 비밀번호 대신 개인 키 파일 사용
     "warehouse": "COMPUTE_WH",
     "database": "DEPARTMENT_STORE_FOOT_TRAFFIC_FOR_SNOWFLAKE_STREAMLIT_HACKATHON",  # 기본값
     "schema": "PUBLIC"

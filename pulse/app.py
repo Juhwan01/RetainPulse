@@ -25,7 +25,7 @@ from src.visualization import (
 )
 # 새로 추가한 대시보드 요약 컴포넌트 임포트
 from src.dashboard_component import create_summary_dashboard
-from config import SNOWFLAKE_CONFIG, APP_CONFIG
+from config import SNOWFLAKE_CONFIG, LOPLAT_CONFIG, RESIDENCE_CONFIG, WEATHER_CONFIG, SPH_CONFIG, DATAKNOWS_CONFIG, APP_CONFIG
 
 # 앱 제목 설정
 st.set_page_config(
@@ -79,47 +79,51 @@ def load_all_data(use_sample=True):
             'risk_customers': sample_data['risk_customers']
         }
     else:
-        # Snowflake 연결
-        conn = get_snowflake_connection(SNOWFLAKE_CONFIG)
+        # 각 데이터베이스에 맞는 Snowflake 연결 생성
+        loplat_conn = get_snowflake_connection(LOPLAT_CONFIG)
+        residence_conn = get_snowflake_connection(RESIDENCE_CONFIG)
+        weather_conn = get_snowflake_connection(WEATHER_CONFIG)
+        sph_conn = get_snowflake_connection(SPH_CONFIG)
+        dataknows_conn = get_snowflake_connection(DATAKNOWS_CONFIG)
         
-        # 데이터 로드
+        # 데이터 로드 - 각 데이터 소스에 맞는 연결 사용
         # 1. 백화점 방문 데이터 (LOPLAT)
         visits_df = load_department_store_visits(
-            conn, 
+            loplat_conn, 
             APP_CONFIG["date_range"]["start"], 
             APP_CONFIG["date_range"]["end"], 
             selected_store if selected_store != "전체" else None
         )
         
         # 2. 주거지 & 근무지 데이터 (LOPLAT)
-        residence_df = load_residence_workplace_data(conn)
+        residence_df = load_residence_workplace_data(residence_conn)
         
         # 3. 날씨 데이터 (LOPLAT)
-        weather_df = load_weather_data(conn, APP_CONFIG["date_range"]["start"], APP_CONFIG["date_range"]["end"])
+        weather_df = load_weather_data(weather_conn, APP_CONFIG["date_range"]["start"], APP_CONFIG["date_range"]["end"])
         
         # 4. 유동인구 데이터 (SPH - SKT)
-        floating_population_df = load_floating_population_data(conn)
+        floating_population_df = load_floating_population_data(sph_conn)
         
         # 5. 자산소득 데이터 (SPH - KCB)
-        income_asset_df = load_income_asset_data(conn)
+        income_asset_df = load_income_asset_data(sph_conn)
         
         # 6. 카드소비내역 데이터 (SPH - 신한카드)
-        card_spending_df = load_card_spending_data(conn)
+        card_spending_df = load_card_spending_data(sph_conn)
         
         # 7. 아파트 평균 시세 데이터 (DataKnows)
-        apartment_price_df = load_apartment_price_data(conn)
+        apartment_price_df = load_apartment_price_data(dataknows_conn)
         
         # 8. 인구 데이터 (DataKnows)
-        population_df = load_population_data(conn)
+        population_df = load_population_data(dataknows_conn)
         
         # 9. 20~40세 여성 및 영유아 인구 데이터 (DataKnows)
-        female_child_df = load_female_child_data(conn)
+        female_child_df = load_female_child_data(dataknows_conn)
         
         # 10. 행정동경계 데이터 (SPH)
-        admin_boundary_df = load_administrative_boundary(conn)
+        admin_boundary_df = load_administrative_boundary(sph_conn)
         
         # 11. 지역 마스터 데이터 (SPH - 추가)
-        region_master_df = load_region_master_data(conn)
+        region_master_df = load_region_master_data(sph_conn)
         
         return {
             'sample_data': False,

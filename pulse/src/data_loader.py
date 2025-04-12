@@ -5,20 +5,32 @@ import streamlit as st
 from datetime import datetime, timedelta
 import numpy as np
 
-# Snowflake 연결 함수
+# Snowflake 연결 함수 수정 - 키 페어 인증 추가
 def get_snowflake_connection(config):
-    return snowflake.connector.connect(
-        user=config["user"],
-        password=config["password"],
-        account=config["account"],
-        warehouse=config["warehouse"],
-        database=config["database"],
-        schema=config["schema"]
-    )
+    if "private_key_file" in config:
+        # 키 파일 기반 인증 (MFA 없이 연결)
+        return snowflake.connector.connect(
+            user=config["user"],
+            account=config["account"],
+            private_key_file=config["private_key_file"],
+            warehouse=config["warehouse"],
+            database=config["database"],
+            schema=config["schema"]
+        )
+    else:
+        # 기존 비밀번호 기반 인증
+        return snowflake.connector.connect(
+            user=config["user"],
+            password=config["password"],
+            account=config["account"],
+            warehouse=config["warehouse"],
+            database=config["database"],
+            schema=config["schema"]
+        )
 
 # 1. 백화점 방문 데이터 로드 (LOPLAT)
 @st.cache_data(ttl=3600)
-def load_department_store_visits(conn, start_date="2021-01-01", end_date="2024-12-31", store=None):
+def load_department_store_visits(_conn, start_date="2021-01-01", end_date="2024-12-31", store=None):
     # 데이터 딕셔너리에 따라 테이블명 수정
     query = f"""
     SELECT 
@@ -32,11 +44,11 @@ def load_department_store_visits(conn, start_date="2021-01-01", end_date="2024-1
     if store and store != "전체":
         query += f" AND DEP_NAME = '{store}'"
         
-    return pd.read_sql(query, conn)
+    return pd.read_sql(query, _conn)
 
 # 2. 주거지 & 근무지 데이터 로드 (LOPLAT)
 @st.cache_data(ttl=3600)
-def load_residence_workplace_data(conn):
+def load_residence_workplace_data(_conn):
     # 데이터 딕셔너리에 따라 테이블명 수정
     query = """
     SELECT 
@@ -46,11 +58,11 @@ def load_residence_workplace_data(conn):
         RATIO
     FROM SNOWFLAKE_STREAMLIT_HACKATHON_LOPLAT_HOME_OFFICE_RATIO
     """
-    return pd.read_sql(query, conn)
+    return pd.read_sql(query, _conn)
 
 # 3. 날씨 데이터 로드 (LOPLAT)
 @st.cache_data(ttl=3600)
-def load_weather_data(conn, start_date="2021-01-01", end_date="2024-12-31"):
+def load_weather_data(_conn, start_date="2021-01-01", end_date="2024-12-31"):
     # 데이터 딕셔너리에 따라 테이블명 수정
     query = f"""
     SELECT 
@@ -61,11 +73,11 @@ def load_weather_data(conn, start_date="2021-01-01", end_date="2024-12-31"):
     FROM SNOWFLAKE_STREAMLIT_HACKATHON_LOPLAT_SEOUL_TEMPERATURE_RAINFALL
     WHERE DATE_KST BETWEEN '{start_date}' AND '{end_date}'
     """
-    return pd.read_sql(query, conn)
+    return pd.read_sql(query, _conn)
 
 # 4. 유동인구 데이터 로드 (SPH - SKT)
 @st.cache_data(ttl=3600)
-def load_floating_population_data(conn):
+def load_floating_population_data(_conn):
     query = """
     SELECT 
         PROVINCE_CODE, CITY_CODE, DISTRICT_CODE, 
@@ -74,29 +86,37 @@ def load_floating_population_data(conn):
         RESIDENTIAL_POPULATION, WORKING_POPULATION, VISITING_POPULATION
     FROM FLOATING_POPULATION_INFO
     """
-    return pd.read_sql(query, conn)
+    return pd.read_sql(query, _conn)
+
 
 # 5. 자산소득 데이터 로드 (SPH - KCB)
 @st.cache_data(ttl=3600)
-def load_income_asset_data(conn):
-    # 데이터 딕셔너리에 따른 주요 컬럼 선택
+def load_income_asset_data(_conn):
+    # 테이블 구조에 맞게 쿼리 수정
     query = """
     SELECT 
         STANDARD_YEAR_MONTH,
-        PROVINCE_CODE, PROVINCE_KOR_NAME,
-        CITY_CODE, CITY_KOR_NAME,
-        DISTRICT_CODE, DISTRICT_KOR_NAME,
-        RATE_INCOME_UNDER_20M, RATE_INCOME_20M_TO_30M, 
-        RATE_INCOME_30M_TO_40M, RATE_INCOME_40M_TO_50M,
-        RATE_INCOME_50M_TO_60M, RATE_INCOME_60M_TO_70M,
-        RATE_INCOME_OVER_70M, TOTAL_USAGE_AMOUNT, TOTAL_CREDIT_CARD_USAGE_AMOUNT
+        PROVINCE_CODE, 
+        CITY_CODE, 
+        DISTRICT_CODE,
+        RATE_INCOME_UNDER_20M, 
+        RATE_INCOME_20M_TO_30M, 
+        RATE_INCOME_30M_TO_40M, 
+        RATE_INCOME_40M_TO_50M,
+        RATE_INCOME_50M_TO_60M, 
+        RATE_INCOME_60M_TO_70M,
+        RATE_INCOME_OVER_70M, 
+        TOTAL_USAGE_AMOUNT, 
+        TOTAL_CREDIT_CARD_USAGE_AMOUNT,
+        AVERAGE_INCOME,
+        AVERAGE_HOUSEHOLD_INCOME
     FROM ASSET_INCOME_INFO
     """
-    return pd.read_sql(query, conn)
+    return pd.read_sql(query, _conn)
 
 # 6. 카드소비내역 데이터 로드 (SPH - 신한카드)
 @st.cache_data(ttl=3600)
-def load_card_spending_data(conn):
+def load_card_spending_data(_conn):
     # 데이터 딕셔너리에 따른 주요 컬럼 선택
     query = """
     SELECT 
@@ -107,11 +127,11 @@ def load_card_spending_data(conn):
         FOOD_SALES, CLOTHING_ACCESSORIES_SALES, COFFEE_SALES
     FROM CARD_SALES_INFO
     """
-    return pd.read_sql(query, conn)
+    return pd.read_sql(query, _conn)
 
 # 7. 아파트 평균 시세 데이터 로드 (DataKnows)
 @st.cache_data(ttl=3600)
-def load_apartment_price_data(conn):
+def load_apartment_price_data(_conn):
     # 데이터 딕셔너리에 따라 테이블명 수정
     query = """
     SELECT 
@@ -123,11 +143,11 @@ def load_apartment_price_data(conn):
         YYYYMMDD
     FROM REGION_APT_RICHGO_MARKET_PRICE_M_H
     """
-    return pd.read_sql(query, conn)
+    return pd.read_sql(query, _conn)
 
 # 8. 인구 데이터 로드 (DataKnows)
 @st.cache_data(ttl=3600)
-def load_population_data(conn):
+def load_population_data(_conn):
     # 데이터 딕셔너리에 따라 테이블명 수정
     query = """
     SELECT 
@@ -137,11 +157,11 @@ def load_population_data(conn):
         YYYYMMDD
     FROM REGION_MOIS_POPULATION_GENDER_AGE_M_H
     """
-    return pd.read_sql(query, conn)
+    return pd.read_sql(query, _conn)
 
 # 9. 20~40세 여성 및 영유아 인구 데이터 로드 (DataKnows)
 @st.cache_data(ttl=3600)
-def load_female_child_data(conn):
+def load_female_child_data(_conn):
     # 데이터 딕셔너리에 따라 테이블명 수정
     query = """
     SELECT 
@@ -150,11 +170,11 @@ def load_female_child_data(conn):
         YYYYMMDD
     FROM REGION_MOIS_POPULATION_AGE_UNDER5_PER_FEMALE_20TO40_M_H
     """
-    return pd.read_sql(query, conn)
+    return pd.read_sql(query, _conn)
 
 # 10. 행정동경계 데이터 로드
 @st.cache_data(ttl=3600)
-def load_administrative_boundary(conn):
+def load_administrative_boundary(_conn):
     # 데이터 딕셔너리에 따른 테이블 사용
     query = """
     SELECT 
@@ -162,11 +182,11 @@ def load_administrative_boundary(conn):
         SORT_ORDER, USE_YN
     FROM CODE_MASTER
     """
-    return pd.read_sql(query, conn)
+    return pd.read_sql(query, _conn)
 
 # 11. 지역 마스터 데이터 로드 (추가)
 @st.cache_data(ttl=3600)
-def load_region_master_data(conn):
+def load_region_master_data(_conn):
     # 데이터 딕셔너리에 따른 새 함수 추가
     query = """
     SELECT 
@@ -175,7 +195,7 @@ def load_region_master_data(conn):
         DISTRICT_CODE, DISTRICT_KOR_NAME
     FROM M_SCCO_MST
     """
-    return pd.read_sql(query, conn)
+    return pd.read_sql(query, _conn)
 
 # 샘플 데이터 생성 함수 (실제 데이터 없을 경우 대체용)
 def generate_sample_data():
