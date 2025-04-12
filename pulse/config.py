@@ -1,7 +1,7 @@
 # Snowflake 접속 정보 
 # 1. LOPLAT 데이터 (백화점 방문, 주거지/근무지, 날씨)
 LOPLAT_CONFIG = {
-    "account": "SN57219",
+    "account": "KGAWUSR-SN57219",
     "user": "wnghks5432",
     "password": "Wjdwnghks1278@",  # 실제 프로젝트에서는 환경변수 등으로 관리
     "warehouse": "COMPUTE_WH",
@@ -11,7 +11,7 @@ LOPLAT_CONFIG = {
 
 # 2. RESIDENTIAL WORKPLACE 데이터
 RESIDENCE_CONFIG = {
-    "account": "SN57219",
+    "account": "KGAWUSR-SN57219",
     "user": "wnghks5432",
     "password": "Wjdwnghks1278@",  # 실제 프로젝트에서는 환경변수 등으로 관리
     "warehouse": "COMPUTE_WH",
@@ -21,7 +21,7 @@ RESIDENCE_CONFIG = {
 
 # 3. WEATHER 데이터
 WEATHER_CONFIG = {
-    "account": "SN57219",
+    "account": "KGAWUSR-SN57219",
     "user": "wnghks5432",
     "password": "Wjdwnghks1278@",  # 실제 프로젝트에서는 환경변수 등으로 관리
     "warehouse": "COMPUTE_WH",
@@ -31,7 +31,7 @@ WEATHER_CONFIG = {
 
 # 4. SPH 데이터 (유동인구, 자산소득, 카드소비내역)
 SPH_CONFIG = {
-    "account": "SN57219",
+    "account": "KGAWUSR-SN57219",
     "user": "wnghks5432",
     "password": "Wjdwnghks1278@",  # 실제 프로젝트에서는 환경변수 등으로 관리
     "warehouse": "COMPUTE_WH",
@@ -41,7 +41,7 @@ SPH_CONFIG = {
 
 # 5. DATAKNOWS 데이터 (아파트 시세, 인구)
 DATAKNOWS_CONFIG = {
-    "account": "SN57219",
+    "account": "KGAWUSR-SN57219",
     "user": "wnghks5432",
     "password": "Wjdwnghks1278@",  # 실제 프로젝트에서는 환경변수 등으로 관리
     "warehouse": "COMPUTE_WH",
@@ -52,7 +52,7 @@ DATAKNOWS_CONFIG = {
 # 통합 Snowflake 접속 정보 (기본 설정)
 # 앱에서는 이 설정을 사용하고, 필요시 data_loader.py에서 각 데이터베이스별 설정으로 전환
 SNOWFLAKE_CONFIG = {
-    "account": "SN57219",
+    "account": "KGAWUSR-SN57219",
     "user": "wnghks5432",
     "password": "Wjdwnghks1278@",  # 실제 프로젝트에서는 환경변수 등으로 관리
     "warehouse": "COMPUTE_WH",
