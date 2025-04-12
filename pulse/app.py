@@ -19,7 +19,7 @@ from src.feature_eng import (
     predict_churn_risk, prepare_integrated_modeling_dataset
 )
 from src.visualization import (
-    display_risk_monitoring, display_segment_analysis,
+    display_advanced_risk_monitoring, display_segment_analysis,  # 업데이트된 시각화 함수 사용
     display_visit_pattern_analysis, display_residence_income_analysis,
     display_retention_strategies
 )
@@ -79,81 +79,62 @@ def load_all_data(use_sample=True):
             'risk_customers': sample_data['risk_customers']
         }
     else:
-        try:
-            # Snowflake 연결
-            conn = get_snowflake_connection(SNOWFLAKE_CONFIG)
-            
-            # 데이터 로드
-            # 1. 백화점 방문 데이터 (LOPLAT)
-            visits_df = load_department_store_visits(
-                conn, 
-                APP_CONFIG["date_range"]["start"], 
-                APP_CONFIG["date_range"]["end"], 
-                selected_store if selected_store != "전체" else None
-            )
-            
-            # 2. 주거지 & 근무지 데이터 (LOPLAT)
-            residence_df = load_residence_workplace_data(conn)
-            
-            # 3. 날씨 데이터 (LOPLAT)
-            weather_df = load_weather_data(conn, APP_CONFIG["date_range"]["start"], APP_CONFIG["date_range"]["end"])
-            
-            # 4. 유동인구 데이터 (SPH - SKT)
-            floating_population_df = load_floating_population_data(conn)
-            
-            # 5. 자산소득 데이터 (SPH - KCB)
-            income_asset_df = load_income_asset_data(conn)
-            
-            # 6. 카드소비내역 데이터 (SPH - 신한카드)
-            card_spending_df = load_card_spending_data(conn)
-            
-            # 7. 아파트 평균 시세 데이터 (DataKnows)
-            apartment_price_df = load_apartment_price_data(conn)
-            
-            # 8. 인구 데이터 (DataKnows)
-            population_df = load_population_data(conn)
-            
-            # 9. 20~40세 여성 및 영유아 인구 데이터 (DataKnows)
-            female_child_df = load_female_child_data(conn)
-            
-            # 10. 행정동경계 데이터 (SPH)
-            admin_boundary_df = load_administrative_boundary(conn)
-            
-            # 11. 지역 마스터 데이터 (SPH - 추가)
-            region_master_df = load_region_master_data(conn)
-            
-            return {
-                'sample_data': False,
-                'visits_df': visits_df,
-                'residence_df': residence_df,
-                'weather_df': weather_df,
-                'floating_population_df': floating_population_df,
-                'income_asset_df': income_asset_df,
-                'card_spending_df': card_spending_df,
-                'apartment_price_df': apartment_price_df,
-                'population_df': population_df,
-                'female_child_df': female_child_df,
-                'admin_boundary_df': admin_boundary_df,
-                'region_master_df': region_master_df
-            }
-        except Exception as e:
-            st.error(f"데이터 로드 중 오류가 발생했습니다: {str(e)}")
-            # 오류 발생 시 샘플 데이터 사용
-            sample_data = generate_sample_data()
-            return {
-                'sample_data': True,
-                'error': str(e),
-                'visits_df': sample_data['visits_df'],
-                'residence_df': sample_data['residence_df'],
-                'weather_df': sample_data['weather_df'],
-                'floating_population_df': sample_data.get('floating_population_df', pd.DataFrame()),
-                'income_asset_df': sample_data.get('income_asset_df', pd.DataFrame()),
-                'card_spending_df': sample_data.get('card_spending_df', pd.DataFrame()),
-                'apt_price_df': sample_data.get('apt_price_df', pd.DataFrame()),
-                'population_df': sample_data.get('population_df', pd.DataFrame()),
-                'female_child_df': sample_data.get('female_child_df', pd.DataFrame()),
-                'risk_customers': sample_data['risk_customers']
-            }
+        # Snowflake 연결
+        conn = get_snowflake_connection(SNOWFLAKE_CONFIG)
+        
+        # 데이터 로드
+        # 1. 백화점 방문 데이터 (LOPLAT)
+        visits_df = load_department_store_visits(
+            conn, 
+            APP_CONFIG["date_range"]["start"], 
+            APP_CONFIG["date_range"]["end"], 
+            selected_store if selected_store != "전체" else None
+        )
+        
+        # 2. 주거지 & 근무지 데이터 (LOPLAT)
+        residence_df = load_residence_workplace_data(conn)
+        
+        # 3. 날씨 데이터 (LOPLAT)
+        weather_df = load_weather_data(conn, APP_CONFIG["date_range"]["start"], APP_CONFIG["date_range"]["end"])
+        
+        # 4. 유동인구 데이터 (SPH - SKT)
+        floating_population_df = load_floating_population_data(conn)
+        
+        # 5. 자산소득 데이터 (SPH - KCB)
+        income_asset_df = load_income_asset_data(conn)
+        
+        # 6. 카드소비내역 데이터 (SPH - 신한카드)
+        card_spending_df = load_card_spending_data(conn)
+        
+        # 7. 아파트 평균 시세 데이터 (DataKnows)
+        apartment_price_df = load_apartment_price_data(conn)
+        
+        # 8. 인구 데이터 (DataKnows)
+        population_df = load_population_data(conn)
+        
+        # 9. 20~40세 여성 및 영유아 인구 데이터 (DataKnows)
+        female_child_df = load_female_child_data(conn)
+        
+        # 10. 행정동경계 데이터 (SPH)
+        admin_boundary_df = load_administrative_boundary(conn)
+        
+        # 11. 지역 마스터 데이터 (SPH - 추가)
+        region_master_df = load_region_master_data(conn)
+        
+        return {
+            'sample_data': False,
+            'visits_df': visits_df,
+            'residence_df': residence_df,
+            'weather_df': weather_df,
+            'floating_population_df': floating_population_df,
+            'income_asset_df': income_asset_df,
+            'card_spending_df': card_spending_df,
+            'apartment_price_df': apartment_price_df,
+            'population_df': population_df,
+            'female_child_df': female_child_df,
+            'admin_boundary_df': admin_boundary_df,
+            'region_master_df': region_master_df
+        }
 
 # 메인 프로세스
 def main():
@@ -168,62 +149,73 @@ def main():
         use_sample = st.checkbox("샘플 데이터 사용 (Snowflake 연결 없이 테스트)", value=True)
         
         if st.button("데이터 로드 및 분석 시작"):
-            with st.spinner("데이터를 로드하고 분석 중입니다..."):
-                data = load_all_data(use_sample)
+            try:
+                with st.spinner("데이터를 로드하고 분석 중입니다..."):
+                    data = load_all_data(use_sample)
+                    
+                    # 세션 상태에 데이터 저장
+                    for key, value in data.items():
+                        st.session_state[key] = value
+                    
+                    # 데이터 분석 수행
+                    if 'visits_df' in data and 'residence_df' in data and 'weather_df' in data:
+                        # 1. 방문 패턴 분석
+                        visit_patterns = analyze_visit_patterns(data['visits_df'])
+                        st.session_state.visit_patterns = visit_patterns
+                        
+                        # 2. 주거지 및 근무지 분석
+                        residence_workplace = analyze_residence_workplace(data['residence_df'])
+                        st.session_state.residence_workplace = residence_workplace
+                        
+                        # 3. 날씨 영향 분석
+                        weather_impact = analyze_weather_impact(data['visits_df'], data['weather_df'])
+                        st.session_state.weather_impact = weather_impact
+                        
+                        # 4. 소득 및 자산 분석 (데이터가 있는 경우)
+                        if 'income_asset_df' in data and not data['income_asset_df'].empty:
+                            income_assets = analyze_income_assets(data['income_asset_df'], data['residence_df'])
+                            st.session_state.income_assets = income_assets
+                        else:
+                            st.session_state.income_assets = {'income_distribution': pd.DataFrame()}
+                        
+                        # 5. 부동산 시세 분석 (데이터가 있는 경우)
+                        if 'apt_price_df' in data and not data['apt_price_df'].empty:
+                            property_prices = analyze_property_prices(data['apt_price_df'], data['residence_df'])
+                            st.session_state.property_prices = property_prices
+                        else:
+                            st.session_state.property_prices = {
+                                'district_prices': pd.DataFrame({'SGG': ['서초구', '강남구', '영등포구', '중구'], 
+                                                                'avg_jeonse': [5000, 5500, 4000, 3800],
+                                                                'avg_meme': [8000, 9000, 6500, 6000]})
+                            }
+                        
+                        # 6. 고객 세그먼트 생성
+                        segments = create_customer_segments(
+                            visit_patterns, residence_workplace, weather_impact, 
+                            st.session_state.income_assets, st.session_state.property_prices
+                        )
+                        st.session_state.segments = segments
+                        
+                        # 7. 이탈 위험 분석 - 개선된 데이터 기반 이탈 예측 사용
+                        churn_risk = predict_churn_risk(segments, visit_patterns, weather_impact)
+                        st.session_state.churn_risk = churn_risk
+                        
+                        st.session_state.analysis_done = True
+                    
+                    st.session_state.data_loaded = True
                 
-                # 세션 상태에 데이터 저장
-                for key, value in data.items():
-                    st.session_state[key] = value
+                st.success("데이터 로드 및 분석이 완료되었습니다!")
+                st.rerun()
                 
-                # 데이터 분석 수행
-                if 'visits_df' in data and 'residence_df' in data and 'weather_df' in data:
-                    # 1. 방문 패턴 분석
-                    visit_patterns = analyze_visit_patterns(data['visits_df'])
-                    st.session_state.visit_patterns = visit_patterns
-                    
-                    # 2. 주거지 및 근무지 분석
-                    residence_workplace = analyze_residence_workplace(data['residence_df'])
-                    st.session_state.residence_workplace = residence_workplace
-                    
-                    # 3. 날씨 영향 분석
-                    weather_impact = analyze_weather_impact(data['visits_df'], data['weather_df'])
-                    st.session_state.weather_impact = weather_impact
-                    
-                    # 4. 소득 및 자산 분석 (데이터가 있는 경우)
-                    if 'income_asset_df' in data and not data['income_asset_df'].empty:
-                        income_assets = analyze_income_assets(data['income_asset_df'], data['residence_df'])
-                        st.session_state.income_assets = income_assets
-                    else:
-                        st.session_state.income_assets = {'income_distribution': pd.DataFrame()}
-                    
-                    # 5. 부동산 시세 분석 (데이터가 있는 경우)
-                    if 'apt_price_df' in data and not data['apt_price_df'].empty:
-                        property_prices = analyze_property_prices(data['apt_price_df'], data['residence_df'])
-                        st.session_state.property_prices = property_prices
-                    else:
-                        st.session_state.property_prices = {
-                            'district_prices': pd.DataFrame({'SGG': ['서초구', '강남구', '영등포구', '중구'], 
-                                                            'avg_jeonse': [5000, 5500, 4000, 3800],
-                                                            'avg_meme': [8000, 9000, 6500, 6000]})
-                        }
-                    
-                    # 6. 고객 세그먼트 생성
-                    segments = create_customer_segments(
-                        visit_patterns, residence_workplace, weather_impact, 
-                        st.session_state.income_assets, st.session_state.property_prices
-                    )
-                    st.session_state.segments = segments
-                    
-                    # 7. 이탈 위험 분석
-                    churn_risk = predict_churn_risk(segments, visit_patterns, weather_impact)
-                    st.session_state.churn_risk = churn_risk
-                    
-                    st.session_state.analysis_done = True
+            except Exception as e:
+                # 오류가 발생하면 자세한 오류 내용을 표시하고 샘플 데이터로 전환하지 않음
+                st.error(f"데이터 로드 중 오류가 발생했습니다: {str(e)}")
+                st.error("Snowflake 연결 정보를 확인하거나 샘플 데이터를 사용하세요.")
                 
-                st.session_state.data_loaded = True
-            
-            st.success("데이터 로드 및 분석이 완료되었습니다!")
-            st.rerun()
+                # 오류 상세 내용 표시
+                with st.expander("오류 상세 정보"):
+                    import traceback
+                    st.code(traceback.format_exc())
     
     # 데이터 로드 및 분석이 완료된 경우 각 탭에 내용 표시
     if st.session_state.data_loaded and st.session_state.analysis_done:
@@ -243,11 +235,10 @@ def main():
             }
             create_summary_dashboard(data_dict)
             
-        # 이탈 위험 모니터링 탭
+        # 이탈 위험 모니터링 탭 - 새로운 고급 모니터링 함수 사용
         with tab1:
-            display_risk_monitoring(
+            display_advanced_risk_monitoring(
                 st.session_state.churn_risk,
-                st.session_state.segments,
                 selected_store,
                 selected_segment,
                 risk_threshold
@@ -290,6 +281,6 @@ def main():
         if not st.session_state.data_loaded:
             st.info("시작하려면 '데이터 로드 및 분석 시작' 버튼을 클릭하세요.")
             st.image("https://img.freepik.com/premium-vector/shop-logo-template-with-shopping-bag_23-2148720533.jpg", width=300)
-
+            
 if __name__ == "__main__":
     main()

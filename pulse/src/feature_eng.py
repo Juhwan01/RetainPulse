@@ -312,96 +312,22 @@ def create_customer_segments(visit_patterns, residence_workplace, weather_impact
 
 # 이탈 위험 고객 분석 및 예측
 def predict_churn_risk(segments, visit_patterns, weather_impact):
-    # 이탈 위험 기준 정의 (예시)
-    risk_thresholds = {
-        '계절성 이탈': {
-            'Winter': 0.3,  # 겨울철 방문 감소
-            'Summer': 0.25  # 여름철 방문 감소
-        },
-        '날씨 민감도': {
-            'rain_sensitivity': 0.3,  # 비 오는 날 방문 감소율
-            'cold_sensitivity': 0.35,  # 추운 날 방문 감소율
-            'hot_sensitivity': 0.25   # 더운 날 방문 감소율
-        },
-        '요일별 패턴': {
-            'weekday_drop': 0.4,  # 평일 방문 감소율
-            'weekend_drop': 0.3   # 주말 방문 감소율
-        }
-    }
+    """
+    이탈 위험 고객 분석 및 예측
     
-    # 백화점별 이탈 위험도 분석
-    store_risk = {}
+    segments: 고객 세그먼트 정보
+    visit_patterns: 방문 패턴 데이터
+    weather_impact: 날씨 영향 데이터
     
-    for store in segments['store_segments'].keys():
-        # 계절성 패턴 분석
-        seasonal = visit_patterns['seasonal_patterns'][visit_patterns['seasonal_patterns']['DEP_NAME'] == store]
-        
-        # 요일별 패턴 분석
-        dow = visit_patterns['dow_patterns'][visit_patterns['dow_patterns']['DEP_NAME'] == store]
-        
-        # 날씨 민감도
-        weather = weather_impact['temp_correlation'][weather_impact['temp_correlation']['DEP_NAME'] == store]
-        
-        # 세그먼트별 이탈 위험도 계산
-        segment_risk = {}
-        for segment, profile in segments['segment_profiles'].items():
-            # 기본 이탈 위험도
-            base_risk = profile['churn_risk']
-            
-            # 계절성 가중치 (겨울철 이탈 위험 증가)
-            seasonal_weight = 1.2 if segment in ['일반소비자', '중산층'] else 1.0
-            
-            # 날씨 민감도 가중치
-            weather_weight = 1.3 if len(weather) > 0 and abs(weather['temp_correlation'].values[0]) > 0.5 else 1.0
-            
-            # 최종 이탈 위험도
-            segment_risk[segment] = min(0.95, base_risk * seasonal_weight * weather_weight)
-        
-        store_risk[store] = segment_risk
+    반환: 기존 형식과 호환되는 이탈 위험 정보 딕셔너리
+    """
+    # 사용할 모듈 import
+    from src.model import advanced_churn_prediction
     
-    # 이탈 위험 유형 정의
-    risk_types = {
-        '날씨 민감형': '날씨 변화에 따라 방문 패턴이 크게 변하는 고객',
-        '계절 민감형': '특정 계절에만 방문이 집중되는 고객',
-        '거리 제약형': '거주지-백화점 간 거리가 멀어 방문이 제한적인 고객',
-        '소득 변동형': '경제 상황에 따라 지출을 조절하는 고객',
-        '경쟁 전환형': '다양한 백화점을 비교 방문하는 고객'
-    }
+    # 개선된 이탈 예측 함수 호출
+    churn_risk = advanced_churn_prediction(visit_patterns, None, weather_impact)
     
-    # 이탈 방지 전략
-    prevention_strategies = {
-        '날씨 민감형': [
-            '우천 시 교통 편의 제공 (발렛 파킹 할인 등)',
-            '날씨 예보 연계 맞춤형 프로모션',
-            '실내 쾌적성 강조 마케팅'
-        ],
-        '계절 민감형': [
-            '비수기 전용 VIP 혜택',
-            '시즌 전환기 선구매 프로모션',
-            '연중 일정한 방문 유도 리워드 프로그램'
-        ],
-        '거리 제약형': [
-            '온라인-오프라인 연계 서비스 강화',
-            '교통비 지원 프로모션',
-            '지역 무료 배송 서비스'
-        ],
-        '소득 변동형': [
-            '무이자 할부 혜택',
-            '가격대별 다양한 상품 구성',
-            '시즌 오프 효율적 활용 가이드'
-        ],
-        '경쟁 전환형': [
-            '차별화된 독점 상품 강화',
-            '로열티 프로그램 혜택 확대',
-            '경쟁사 대비 우위 서비스 강조'
-        ]
-    }
-    
-    return {
-        'store_risk': store_risk,
-        'risk_types': risk_types,
-        'prevention_strategies': prevention_strategies
-    }
+    return churn_risk
 
 # 종합 데이터 모델링을 위한 데이터셋 준비
 def prepare_integrated_modeling_dataset(

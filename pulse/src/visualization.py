@@ -7,53 +7,240 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 
 # 이탈 위험 모니터링 시각화
-def display_risk_monitoring(churn_risk, segments, store=None, selected_segment=None, risk_threshold=70):
-    st.header("이탈 위험 모니터링")
+def display_advanced_risk_monitoring(churn_risk, store=None, selected_segment=None, risk_threshold=70):
+    """
+    데이터 기반 이탈 위험 고객 모니터링 시각화 (기존 display_risk_monitoring 확장)
     
-    # 백화점별 세그먼트별 이탈 위험도
-    risk_data = []
-    for store_name, store_risks in churn_risk['store_risk'].items():
-        if store and store != "전체" and store != store_name:
-            continue
+    churn_risk: advanced_churn_prediction 함수의 결과
+    store: 선택된 백화점 (필터링용)
+    selected_segment: 선택된 세그먼트 목록 (필터링용)
+    risk_threshold: 이탈 위험 임계값 (%)
+    """
+    import streamlit as st
+    import pandas as pd
+    import numpy as np
+    import plotly.express as px
+    import plotly.graph_objects as go
+    
+    st.header("데이터 기반 이탈 위험 모니터링")
+    
+    # 세부 위험 요소 데이터 보유 확인
+    if 'detailed_risk_data' in churn_risk:
+        detailed_data = churn_risk['detailed_risk_data']
+        
+        # 백화점별 이탈 위험 점수 시각화
+        if 'store_churn_risk' in detailed_data:
+            store_risk_data = []
+            for store_name, risks in detailed_data['store_churn_risk'].items():
+                if store and store != "전체" and store != store_name:
+                    continue
+                
+                # 주요 위험 요소 추출
+                risk_factors = risks['risk_factors']
+                store_risk_data.append({
+                    '백화점': store_name,
+                    '종합 위험도': risks['overall_risk'] * 100,
+                    '트렌드 위험': risk_factors['trend_risk'] * 100,
+                    '방문빈도 감소': risk_factors['frequency_decline'] * 100,
+                    '이상패턴 비율': risk_factors['anomaly_ratio'] * 100,
+                    '계절성 위험': risk_factors['seasonal_risk'] * 100,
+                    '날씨 민감도': risk_factors['weather_risk'] * 100,
+                    '거리 제약': risk_factors['distance_risk'] * 100
+                })
             
-        for segment_name, risk_value in store_risks.items():
-            if selected_segment and "전체" not in selected_segment and segment_name not in selected_segment:
+            risk_df = pd.DataFrame(store_risk_data)
+            
+            if not risk_df.empty:
+                # 위험 요소 레이더 차트
+                st.subheader("백화점별 이탈 위험 요소 분석")
+                
+                # 데이터 형식 변환 (레이더 차트용)
+                radar_data = pd.melt(
+                    risk_df,
+                    id_vars=['백화점', '종합 위험도'],
+                    value_vars=[
+                        '트렌드 위험', '방문빈도 감소', '이상패턴 비율', 
+                        '계절성 위험', '날씨 민감도', '거리 제약'
+                    ],
+                    var_name='위험 요소',
+                    value_name='위험도'
+                )
+                
+                fig = px.line_polar(
+                    radar_data, 
+                    r='위험도', 
+                    theta='위험 요소', 
+                    color='백화점',
+                    line_close=True,
+                    range_r=[0, 100],
+                    title="백화점별 이탈 위험 요소 프로필"
+                )
+                st.plotly_chart(fig, use_container_width=True)
+                
+                # 백화점별 종합 위험도 차트
+                st.subheader("백화점별 종합 이탈 위험도")
+                
+                fig = px.bar(
+                    risk_df,
+                    x='백화점',
+                    y='종합 위험도',
+                    color='종합 위험도',
+                    text='종합 위험도',
+                    color_continuous_scale='RdYlGn_r',
+                    title="백화점별 종합 이탈 위험도 (%)"
+                )
+                fig.update_traces(texttemplate='%{text:.1f}%', textposition='outside')
+                
+                st.plotly_chart(fig, use_container_width=True)
+        
+        # 세그먼트별 이탈 위험도 히트맵
+        st.subheader("세그먼트별 이탈 위험도")
+        risk_data = []
+        for store_name, store_risk in detailed_data['store_churn_risk'].items():
+            if store and store != "전체" and store != store_name:
                 continue
                 
-            risk_data.append({
-                "백화점": store_name,
-                "세그먼트": segment_name,
-                "이탈_위험도": round(risk_value * 100, 1)  # 0-1 값을 퍼센트로 변환
-            })
-    
-    risk_df = pd.DataFrame(risk_data)
-    
-    if not risk_df.empty:
-        # 이탈 위험도 히트맵
-        st.subheader("세그먼트별 이탈 위험도")
+            for segment_name, risk_value in store_risk['segment_risks'].items():
+                if selected_segment and "전체" not in selected_segment and segment_name not in selected_segment:
+                    continue
+                    
+                risk_data.append({
+                    "백화점": store_name,
+                    "세그먼트": segment_name,
+                    "이탈_위험도": round(risk_value * 100, 1)
+                })
         
-        fig = px.imshow(
-            risk_df.pivot(index="세그먼트", columns="백화점", values="이탈_위험도"),
-            text_auto=True,
-            color_continuous_scale="RdYlGn_r",
-            aspect="auto",
-            title="세그먼트별 백화점별 이탈 위험도 (%)"
-        )
-        st.plotly_chart(fig, use_container_width=True)
+        risk_segment_df = pd.DataFrame(risk_data)
         
-        # 위험 유형별 대응 전략
-        st.subheader("이탈 위험 유형별 대응 전략")
+        if not risk_segment_df.empty:
+            fig = px.imshow(
+                risk_segment_df.pivot(index="세그먼트", columns="백화점", values="이탈_위험도"),
+                text_auto=True,
+                color_continuous_scale="RdYlGn_r",
+                aspect="auto",
+                title="세그먼트별 백화점별 이탈 위험도 (%)"
+            )
+            st.plotly_chart(fig, use_container_width=True)
         
-        risk_tabs = st.tabs(list(churn_risk['risk_types'].keys()))
-        
-        for i, (risk_type, description) in enumerate(churn_risk['risk_types'].items()):
-            with risk_tabs[i]:
-                st.write(f"**{risk_type}**: {description}")
+        # 이탈 위험 유형 분석
+        if 'risk_types' in detailed_data:
+            store_types = detailed_data['risk_types']
+            
+            type_data = []
+            for store_name, risk_type in store_types.items():
+                if store and store != "전체" and store != store_name:
+                    continue
+                
+                type_data.append({
+                    '백화점': store_name,
+                    '주요 이탈 위험 유형': risk_type
+                })
+            
+            type_df = pd.DataFrame(type_data)
+            
+            if not type_df.empty:
+                st.subheader("백화점별 주요 이탈 위험 유형")
+                st.dataframe(type_df, use_container_width=True)
+                
+                # 위험 유형별 대응 전략
+                selected_store = st.selectbox(
+                    "백화점 선택 (대응 전략 확인)",
+                    type_df['백화점'].unique()
+                )
+                
+                selected_type = type_df[type_df['백화점'] == selected_store]['주요 이탈 위험 유형'].iloc[0]
+                
+                st.write(f"**{selected_store}의 주요 이탈 위험 유형:** {selected_type}")
+                st.write(f"**위험 유형 설명:** {churn_risk['risk_types'].get(selected_type, '')}")
+                
                 st.write("**권장 대응 전략:**")
-                for strategy in churn_risk['prevention_strategies'].get(risk_type, []):
+                for strategy in churn_risk['prevention_strategies'].get(selected_type, []):
                     st.write(f"- {strategy}")
+        
+        # 이탈 위험 고객 추정 데이터
+        if 'at_risk_customers' in detailed_data:
+            st.subheader("이탈 위험 고객 추정")
+            
+            risk_customer_data = []
+            for store_name, data in detailed_data['at_risk_customers'].items():
+                if store and store != "전체" and store != store_name:
+                    continue
+                
+                risk_customer_data.append({
+                    '백화점': store_name,
+                    '추정 이탈 위험 고객 수': data['estimated_at_risk'],
+                    '고위험 세그먼트': ', '.join(data['high_risk_segments'])
+                })
+            
+            risk_customer_df = pd.DataFrame(risk_customer_data)
+            
+            if not risk_customer_df.empty:
+                st.dataframe(risk_customer_df, use_container_width=True)
+                
+                # 이탈 신호 시각화
+                if len(risk_customer_data) > 0:
+                    signals = detailed_data['at_risk_customers'][risk_customer_data[0]['백화점']]['churn_signals']
+                    
+                    signal_df = pd.DataFrame({
+                        '이탈 신호': list(signals.keys()),
+                        '위험도': [v * 100 for v in signals.values()]
+                    })
+                    
+                    fig = px.bar(
+                        signal_df,
+                        x='이탈 신호',
+                        y='위험도',
+                        color='위험도',
+                        text='위험도',
+                        color_continuous_scale='RdYlGn_r',
+                        title="이탈 신호별 위험도 (%)"
+                    )
+                    fig.update_traces(texttemplate='%{text:.1f}%', textposition='outside')
+                    
+                    st.plotly_chart(fig, use_container_width=True)
     else:
-        st.info("선택한 조건에 맞는 이탈 위험 데이터가 없습니다.")
+        # 기존 이탈 위험 표시 (새로운 데이터가 없는 경우)
+        risk_data = []
+        for store_name, store_risks in churn_risk['store_risk'].items():
+            if store and store != "전체" and store != store_name:
+                continue
+                
+            for segment_name, risk_value in store_risks.items():
+                if selected_segment and "전체" not in selected_segment and segment_name not in selected_segment:
+                    continue
+                    
+                risk_data.append({
+                    "백화점": store_name,
+                    "세그먼트": segment_name,
+                    "이탈_위험도": round(risk_value * 100, 1)
+                })
+        
+        risk_df = pd.DataFrame(risk_data)
+        
+        if not risk_df.empty:
+            # 이탈 위험도 히트맵
+            st.subheader("세그먼트별 이탈 위험도")
+            
+            fig = px.imshow(
+                risk_df.pivot(index="세그먼트", columns="백화점", values="이탈_위험도"),
+                text_auto=True,
+                color_continuous_scale="RdYlGn_r",
+                aspect="auto",
+                title="세그먼트별 백화점별 이탈 위험도 (%)"
+            )
+            st.plotly_chart(fig, use_container_width=True)
+    
+    # 이탈 위험 유형별 대응 전략 (공통)
+    st.subheader("이탈 위험 유형별 대응 전략")
+    
+    risk_tabs = st.tabs(list(churn_risk['risk_types'].keys()))
+    
+    for i, (risk_type, description) in enumerate(churn_risk['risk_types'].items()):
+        with risk_tabs[i]:
+            st.write(f"**{risk_type}**: {description}")
+            st.write("**권장 대응 전략:**")
+            for strategy in churn_risk['prevention_strategies'].get(risk_type, []):
+                st.write(f"- {strategy}")
 
 # 고객 세그먼트 분석 시각화
 def display_segment_analysis(segments, store=None, selected_segment=None):

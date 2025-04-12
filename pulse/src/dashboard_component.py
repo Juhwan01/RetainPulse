@@ -96,37 +96,130 @@ def create_summary_dashboard(data_dict):
     else:
         st.warning("방문 날짜 데이터가 올바른 형식이 아닙니다.")
     
-    # 이탈 위험 요약
+    # 이탈 위험 요약 - 개선된 데이터 기반 이탈 위험 표시
     st.subheader("이탈 위험 세그먼트 요약")
     
-    # 샘플 데이터 (실제로는 분석 결과에서 가져옴)
-    risk_data = pd.DataFrame({
-        "세그먼트": ["VIP 고객", "정기 방문 고객", "간헐적 방문 고객", "이탈 위험 고객"],
-        "고객 비중": [0.15, 0.30, 0.35, 0.20],
-        "이탈 위험도": [0.10, 0.25, 0.45, 0.75],
-        "연간 평균 소비액": [500, 300, 150, 80]
-    })
-    
-    # 버블 차트로 표시
-    fig = px.scatter(
-        risk_data,
-        x="이탈 위험도",
-        y="연간 평균 소비액",
-        size="고객 비중",
-        color="세그먼트",
-        hover_name="세그먼트",
-        text="세그먼트",
-        size_max=50,
-        title="세그먼트별 이탈 위험도와 가치"
-    )
-    
-    fig.update_traces(textposition='top center')
-    fig.update_layout(
-        xaxis=dict(title="이탈 위험도", tickformat=".0%"),
-        yaxis=dict(title="연간 평균 소비액 (만원)")
-    )
-    
-    st.plotly_chart(fig, use_container_width=True)
+    if 'churn_risk' in data_dict and data_dict['churn_risk'] is not None:
+        # 새로운 데이터 기반 이탈 위험 정보를 확인
+        has_detailed_data = 'detailed_risk_data' in data_dict['churn_risk']
+        
+        if has_detailed_data:
+            # 새로운 형식의 이탈 위험 데이터 사용
+            detailed_risk = data_dict['churn_risk']['detailed_risk_data']
+            
+            if 'store_churn_risk' in detailed_risk:
+                risk_data = []
+                # 각 백화점과 세그먼트별 데이터 수집
+                for store, risk_data_by_store in detailed_risk['store_churn_risk'].items():
+                    segment_risks = risk_data_by_store['segment_risks']
+                    overall_risk = risk_data_by_store['overall_risk']
+                    
+                    # 각 세그먼트별 정보 추가
+                    for segment, risk_score in segment_risks.items():
+                        # 프로젝트의 원래 세그먼트에 맞는 가상 소비액 및 고객 비중
+                        if segment == 'VIP 고객':
+                            avg_spend = 500
+                            customer_ratio = 0.15
+                        elif segment == '정기 방문 고객':
+                            avg_spend = 300
+                            customer_ratio = 0.30
+                        elif segment == '간헐적 방문 고객':
+                            avg_spend = 150
+                            customer_ratio = 0.35
+                        else:  # 이탈 위험 고객
+                            avg_spend = 80
+                            customer_ratio = 0.20
+                            
+                        risk_data.append({
+                            "백화점": store,
+                            "세그먼트": segment,
+                            "이탈 위험도": risk_score,
+                            "고객 비중": customer_ratio,
+                            "연간 평균 소비액": avg_spend
+                        })
+                
+                risk_df = pd.DataFrame(risk_data)
+                
+                # 버블 차트로 이탈 위험 시각화
+                fig = px.scatter(
+                    risk_df,
+                    x="이탈 위험도",
+                    y="연간 평균 소비액",
+                    size="고객 비중",
+                    color="세그먼트",
+                    facet_col="백화점",
+                    hover_name="세그먼트",
+                    size_max=50,
+                    title="세그먼트별 이탈 위험도와 가치"
+                )
+                
+                fig.update_layout(
+                    xaxis=dict(title="이탈 위험도"),
+                    yaxis=dict(title="연간 평균 소비액 (만원)")
+                )
+                
+                st.plotly_chart(fig, use_container_width=True)
+            else:
+                st.warning("상세 이탈 위험 데이터가 충분하지 않습니다.")
+        else:
+            # 기존 형식 사용
+            # 샘플 데이터 (기존 세그먼트 기반 위험도 사용)
+            risk_data = pd.DataFrame({
+                "세그먼트": ["VIP 고객", "정기 방문 고객", "간헐적 방문 고객", "이탈 위험 고객"],
+                "고객 비중": [0.15, 0.30, 0.35, 0.20],
+                "이탈 위험도": [0.10, 0.25, 0.45, 0.75],
+                "연간 평균 소비액": [500, 300, 150, 80]
+            })
+            
+            # 버블 차트로 표시
+            fig = px.scatter(
+                risk_data,
+                x="이탈 위험도",
+                y="연간 평균 소비액",
+                size="고객 비중",
+                color="세그먼트",
+                hover_name="세그먼트",
+                text="세그먼트",
+                size_max=50,
+                title="세그먼트별 이탈 위험도와 가치"
+            )
+            
+            fig.update_traces(textposition='top center')
+            fig.update_layout(
+                xaxis=dict(title="이탈 위험도", tickformat=".0%"),
+                yaxis=dict(title="연간 평균 소비액 (만원)")
+            )
+            
+            st.plotly_chart(fig, use_container_width=True)
+    else:
+        # 샘플 데이터로 시각화
+        risk_data = pd.DataFrame({
+            "세그먼트": ["VIP 고객", "정기 방문 고객", "간헐적 방문 고객", "이탈 위험 고객"],
+            "고객 비중": [0.15, 0.30, 0.35, 0.20],
+            "이탈 위험도": [0.10, 0.25, 0.45, 0.75],
+            "연간 평균 소비액": [500, 300, 150, 80]
+        })
+        
+        # 버블 차트로 표시
+        fig = px.scatter(
+            risk_data,
+            x="이탈 위험도",
+            y="연간 평균 소비액",
+            size="고객 비중",
+            color="세그먼트",
+            hover_name="세그먼트",
+            text="세그먼트",
+            size_max=50,
+            title="세그먼트별 이탈 위험도와 가치 (샘플 데이터)"
+        )
+        
+        fig.update_traces(textposition='top center')
+        fig.update_layout(
+            xaxis=dict(title="이탈 위험도", tickformat=".0%"),
+            yaxis=dict(title="연간 평균 소비액 (만원)")
+        )
+        
+        st.plotly_chart(fig, use_container_width=True)
     
     # 날씨 영향 분석
     st.subheader("날씨와 방문 관계 분석")
