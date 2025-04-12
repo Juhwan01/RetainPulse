@@ -148,13 +148,13 @@ def load_apartment_price_data(_conn):
 # 8. 인구 데이터 로드 (DataKnows)
 @st.cache_data(ttl=3600)
 def load_population_data(_conn):
-    # 데이터 딕셔너리에 따라 테이블명 수정
+    # 실제 테이블 컬럼에 맞게 쿼리 수정
     query = """
     SELECT 
-        BJD_CODE, EMD, SD, SGG, REGION_LEVEL,
+        REGION_LEVEL, BJD_CODE, SD, SGG, EMD, YYYYMMDD,
         TOTAL, MALE, FEMALE,
-        AGE_208, AGE_209, AGE_308, AGE_309, AGE_408, AGE_409,
-        YYYYMMDD
+        AGE_UNDER20, AGE_20S, AGE_30S, AGE_40S, 
+        AGE_50S, AGE_60S, AGE_OVER70
     FROM REGION_MOIS_POPULATION_GENDER_AGE_M_H
     """
     return pd.read_sql(query, _conn)
@@ -162,12 +162,12 @@ def load_population_data(_conn):
 # 9. 20~40세 여성 및 영유아 인구 데이터 로드 (DataKnows)
 @st.cache_data(ttl=3600)
 def load_female_child_data(_conn):
-    # 데이터 딕셔너리에 따라 테이블명 수정
+    # 실제 테이블 컬럼에 맞게 쿼리 수정
     query = """
     SELECT 
-        BJD_CODE, EMD, SD, SGG, REGION_LEVEL,
-        TOTAL, FEMALE_20TO40, AGE_UNDER5,
-        YYYYMMDD
+        REGION_LEVEL, BJD_CODE, SD, SGG, EMD, YYYYMMDD,
+        AGE_UNDER5, FEMALE_20TO40, 
+        AGE_UNDER5_PER_FEMALE_20TO40
     FROM REGION_MOIS_POPULATION_AGE_UNDER5_PER_FEMALE_20TO40_M_H
     """
     return pd.read_sql(query, _conn)
